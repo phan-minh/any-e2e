@@ -30,38 +30,57 @@ on:
         description: Brand description
         default: 'nrma,state,ami,asb,anz,bnz'
         required: true 
+
 jobs:
   define-matrix:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - name: Create matrix
+      - name: Generate Matrix
         id: set-matrix
         run: |
-          import json
-
           # Get inputs
-          environment = '${{ github.event.inputs.environment }}'
-          tags = '${{ github.event.inputs.tag }}'.split(',')
-          products = '${{ github.event.inputs.product }}'.split(',')
-          brands = '${{ github.event.inputs.brand }}'.split(',')
+          environment="${{ github.event.inputs.environment }}"
+          tags="${{ github.event.inputs.tag }}"
+          products="${{ github.event.inputs.product }}"
+          brands="${{ github.event.inputs.brand }}"
 
-          # Create the matrix
-          matrix = [{"environment": environment, "tag": tag, "product": product, "brand": brand} for tag in tags for product in products for brand in brands]
+          # Split inputs into arrays
+          IFS=',' read -r -a tag_array <<< "$tags"
+          IFS=',' read -r -a product_array <<< "$products"
+          IFS=',' read -r -a brand_array <<< "$brands"
 
-          # Print and set the matrix
-          print("Matrix:", json.dumps(matrix))
-          print(f"::set-output name=matrix::{json.dumps(matrix)}")
-  execute-cumm:
+          # Initialize the matrix
+          matrix="["
+
+          # Create combinations
+          for tag in "${tag_array[@]}"; do
+            for product in "${product_array[@]}"; do
+              for brand in "${brand_array[@]}"; do
+                combination="{\"environment\":\"$environment\",\"tag\":\"$tag\",\"product\":\"$product\",\"brand\":\"$brand\"}"
+                matrix+="$combination,"
+              done
+            done
+          done
+
+          # Remove the trailing comma and close the JSON array
+          matrix="${matrix%,}]"
+
+          # Output the matrix
+          echo "Matrix: $matrix"
+          echo "::set-output name=matrix::$matrix"
+    
+  execute-tests:
     needs: define-matrix
     runs-on: ubuntu-latest
     strategy:
       matrix:
         combination: ${{ fromJson(needs.define-matrix.outputs.matrix) }}
     steps:
-      - name: Run with matrix values
+      - name: Run tests for combination
         run: |
+          echo "Running tests with the following configuration:"
           echo "Environment: ${{ matrix.combination.environment }}"
           echo "Tag: ${{ matrix.combination.tag }}"
           echo "Product: ${{ matrix.combination.product }}"
