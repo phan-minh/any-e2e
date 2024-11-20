@@ -54,18 +54,22 @@ jobs:
           products="${{ github.event.inputs.product }}"
           brand="${{ github.event.inputs.brand }}"
 
-          # Trim spaces and check if tag is empty
-          tags_trimmed=$(echo "$tags" | xargs)
+          # Define the default tag value
+          default_tag='partner-portal,regression,regression-direct,regression-anon'
 
-          # Split inputs into arrays
+          # Check if the tags are empty or have the default value
+          if [[ "$tags" == "$default_tag" || -z "$tags" ]]; then
+            tags=""
+          fi
+
+          # Split products into array
           IFS=',' read -r -a product_array <<< "$products"
 
           # Initialize the matrix
           matrix="["
 
-          # Check if tags are empty
-          if [[ -z "$tags_trimmed" ]]; then
-            # If tags are empty, create combinations without tags
+          # If tags are empty, create combinations without tags
+          if [[ -z "$tags" ]]; then
             for product in "${product_array[@]}"; do
               combination="{\"environment\":\"$environment\",\"tag\":\"\",\"product\":\"$product\",\"brand\":\"$brand\"}"
               matrix+="$combination,"
