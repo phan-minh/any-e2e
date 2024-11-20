@@ -26,9 +26,16 @@ on:
         default: 'motor,landlord,home'
         required: true
       brand:
-        type: string
+        type: choice
         description: Brand description
-        default: 'nrma,state,ami,asb,anz,bnz'
+        options:
+          - nrma
+          - asb
+          - anz
+          - bnz
+          - ami
+          - state
+        default: nrma
         required: true 
 
 jobs:
@@ -44,12 +51,11 @@ jobs:
           environment="${{ github.event.inputs.environment }}"
           tags="${{ github.event.inputs.tag }}"
           products="${{ github.event.inputs.product }}"
-          brands="${{ github.event.inputs.brand }}"
+          brand="${{ github.event.inputs.brand }}" # Single choice input
 
           # Split inputs into arrays
           IFS=',' read -r -a tag_array <<< "$tags"
           IFS=',' read -r -a product_array <<< "$products"
-          IFS=',' read -r -a brand_array <<< "$brands"
 
           # Initialize the matrix
           matrix="["
@@ -57,10 +63,8 @@ jobs:
           # Create combinations
           for tag in "${tag_array[@]}"; do
             for product in "${product_array[@]}"; do
-              for brand in "${brand_array[@]}"; do
-                combination="{\"environment\":\"$environment\",\"tag\":\"$tag\",\"product\":\"$product\",\"brand\":\"$brand\"}"
-                matrix+="$combination,"
-              done
+              combination="{\"environment\":\"$environment\",\"tag\":\"$tag\",\"product\":\"$product\",\"brand\":\"$brand\"}"
+              matrix+="$combination,"
             done
           done
 
