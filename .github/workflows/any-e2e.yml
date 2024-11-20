@@ -1,1 +1,68 @@
+name: any e2e
+run-name: "Trigger Workflows"
+on:
+  workflow_dispatch:
+    inputs: 
+      environment: 
+        type: choice
+        description: Environment
+        options:
+          - stub
+          - sit1
+          - sit2
+          - sit3
+          - sit4
+          - uat1
+        default: sit1
+        required: true
+      tag: 
+        type: string
+        description: Tag description
+        default: 'parner-portal,regression,regression-direct,regression-anon'
+        required: false
+      product:
+        type: string
+        description: Product description
+        default: 'motor,landlord,home'
+        required: true
+      brand:
+        type: string
+        description: Brand description
+        default: 'nrma,state,ami,asb,anz,bnz'
+        required: true 
+jobs:
+  define-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Create matrix
+        id: set-matrix
+        run: |
+          import json
 
+          # Get inputs
+          environment = '${{ github.event.inputs.environment }}'
+          tags = '${{ github.event.inputs.tag }}'.split(',')
+          products = '${{ github.event.inputs.product }}'.split(',')
+          brands = '${{ github.event.inputs.brand }}'.split(',')
+
+          # Create the matrix
+          matrix = [{"environment": environment, "tag": tag, "product": product, "brand": brand} for tag in tags for product in products for brand in brands]
+
+          # Print and set the matrix
+          print("Matrix:", json.dumps(matrix))
+          print(f"::set-output name=matrix::{json.dumps(matrix)}")
+  execute-cumm:
+    needs: define-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        combination: ${{ fromJson(needs.define-matrix.outputs.matrix) }}
+    steps:
+      - name: Run with matrix values
+        run: |
+          echo "Environment: ${{ matrix.combination.environment }}"
+          echo "Tag: ${{ matrix.combination.tag }}"
+          echo "Product: ${{ matrix.combination.product }}"
+          echo "Brand: ${{ matrix.combination.brand }}"
