@@ -1,5 +1,6 @@
 name: any e2e
 run-name: "Trigger Workflows"
+
 on:
   workflow_dispatch:
     inputs: 
@@ -18,7 +19,7 @@ on:
       tag: 
         type: string
         description: Tag description
-        default: 'parner-portal,regression,regression-direct,regression-anon'
+        default: 'partner-portal,regression,regression-direct,regression-anon'
         required: false
       product:
         type: string
@@ -51,7 +52,7 @@ jobs:
           environment="${{ github.event.inputs.environment }}"
           tags="${{ github.event.inputs.tag }}"
           products="${{ github.event.inputs.product }}"
-          brand="${{ github.event.inputs.brand }}" # Single choice input
+          brand="${{ github.event.inputs.brand }}"
 
           # Split inputs into arrays
           IFS=',' read -r -a tag_array <<< "$tags"
@@ -60,13 +61,22 @@ jobs:
           # Initialize the matrix
           matrix="["
 
-          # Create combinations
-          for tag in "${tag_array[@]}"; do
+          # Check if tags are empty
+          if [[ -z "$tags" ]]; then
+            # Create combinations without tags
             for product in "${product_array[@]}"; do
-              combination="{\"environment\":\"$environment\",\"tag\":\"$tag\",\"product\":\"$product\",\"brand\":\"$brand\"}"
+              combination="{\"environment\":\"$environment\",\"tag\":\"\",\"product\":\"$product\",\"brand\":\"$brand\"}"
               matrix+="$combination,"
             done
-          done
+          else
+            # Create combinations with tags
+            for tag in "${tag_array[@]}"; do
+              for product in "${product_array[@]}"; do
+                combination="{\"environment\":\"$environment\",\"tag\":\"$tag\",\"product\":\"$product\",\"brand\":\"$brand\"}"
+                matrix+="$combination,"
+              done
+            done
+          fi
 
           # Remove the trailing comma and close the JSON array
           matrix="${matrix%,}]"
@@ -74,7 +84,7 @@ jobs:
           # Output the matrix
           echo "Matrix: $matrix"
           echo "::set-output name=matrix::$matrix"
-    
+
   execute-tests:
     needs: define-matrix
     runs-on: ubuntu-latest
