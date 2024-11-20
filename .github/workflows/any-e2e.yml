@@ -54,22 +54,25 @@ jobs:
           products="${{ github.event.inputs.product }}"
           brand="${{ github.event.inputs.brand }}"
 
+          # Trim spaces and check if tag is empty
+          tags_trimmed=$(echo "$tags" | xargs)
+
           # Split inputs into arrays
-          IFS=',' read -r -a tag_array <<< "$tags"
           IFS=',' read -r -a product_array <<< "$products"
 
           # Initialize the matrix
-          tags_trimmed=$(echo "$tags" | xargs)
           matrix="["
 
           # Check if tags are empty
           if [[ -z "$tags_trimmed" ]]; then
+            # If tags are empty, create combinations without tags
             for product in "${product_array[@]}"; do
               combination="{\"environment\":\"$environment\",\"tag\":\"\",\"product\":\"$product\",\"brand\":\"$brand\"}"
               matrix+="$combination,"
             done
           else
-            # Create combinations with tags
+            # If tags are not empty, create combinations with tags
+            IFS=',' read -r -a tag_array <<< "$tags"
             for tag in "${tag_array[@]}"; do
               for product in "${product_array[@]}"; do
                 combination="{\"environment\":\"$environment\",\"tag\":\"$tag\",\"product\":\"$product\",\"brand\":\"$brand\"}"
